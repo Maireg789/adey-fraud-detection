@@ -1,0 +1,11 @@
+# Environments
+.venv/
+venv/
+__pycache__/
+
+# Data (Tutors want to see code, not the raw CSVs which are too big for GitHub)
+data/raw/*
+data/processed/*
+
+# Notebook checkpoints
+.ipynb_checkpoints/
