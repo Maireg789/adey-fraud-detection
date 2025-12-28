@@ -7,3 +7,5 @@ scikit-learn<1.6.0
 imbalanced-learn>=0.12.0
 shap
 jupyter
+xgboost
+imbalanced-learn
