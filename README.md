@@ -31,3 +31,12 @@ adey-fraud-detection/
 ├── requirements.txt        # Pinned dependencies for environment stability
 ├── Interim_Report_1.md     # Detailed summary of Task 1 findings
 └── README.md
+Interim 2: Modeling and Evaluation (Completed Dec 28, 2025)
+1. Data Preparation & Handling Imbalance
+Stratified Splitting: All data was split into training (80%) and testing (20%) sets using stratification to ensure the minority "Fraud" class was represented equally in both sets.
+SMOTE (Synthetic Minority Over-sampling Technique): To address the extreme class imbalance (less than 1% fraud), SMOTE was applied only to the training data to prevent data leakage while allowing the model to learn fraud patterns effectively.
+2. Modeling & Hyperparameter Tuning
+We implemented two distinct models for both the E-commerce and Credit Card datasets:
+Baseline: Logistic Regression (highly interpretable).
+Ensemble: XGBoost (captures complex, non-linear patterns).
+Tuning: Used RandomizedSearchCV to optimize XGBoost hyperparameters (n_estimators, max_depth, learning_rate, and scale_pos_weight).
