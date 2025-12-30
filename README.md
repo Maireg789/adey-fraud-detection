@@ -41,3 +41,14 @@ Based on SHAP and EDA results, we recommend the following for Adey Innovations:
 Implement a "Cool-off" Period: Accounts making purchases within 10 minutes of signup should trigger a mandatory 24-hour hold or manual identity verification.
 Adaptive MFA: Transactions exceeding $200 from countries identified as "High Risk" in our SHAP analysis should require Multi-Factor Authentication (OTP).
 Velocity Thresholds: Implement automated blocks for any Device ID linked to more than 3 unique User IDs within a 24-hour window, as this pattern strongly correlates with fraudulent activity.
+## 💡 Final Business Insights & Recommendations
+Based on SHAP explainability:
+1. **High-Velocity Fraud:** `time_since_signup` is the strongest predictor. **Recommendation:** Any transaction within 5 minutes of account creation should require 3D-Secure (OTP) verification.
+2. **Value Thresholds:** Fraud increases with `purchase_value` in specific regions. **Recommendation:** Implement a manual review trigger for first-time purchases over $150 from high-risk countries.
+3. **Identity Verification:** Device ID reuse across multiple User IDs is a major red flag. **Recommendation:** Permanently ban Device IDs linked to >3 fraudulent accounts.
+
+## 📊 Model Comparison (Credit Card & E-commerce)
+| Dataset | Model | AUC-PR | F1-Score | Justification |
+| :--- | :--- | :--- | :--- | :--- |
+| E-commerce | Tuned XGBoost | 0.81 | 0.78 | Selected for balance of Precision/Recall |
+| Bank Data | Tuned XGBoost | 0.89 | 0.85 | Robust against extreme imbalance |
