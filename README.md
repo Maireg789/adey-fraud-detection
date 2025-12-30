@@ -17,20 +17,16 @@ Based on initial feedback, this repository has been updated from a structure-onl
 ## 📂 Project Structure
 ```text
 adey-fraud-detection/
-├── data/
-│   ├── raw/                # Original Fraud_Data, Creditcard, and IP datasets
-│   └── processed/          # Data post-cleaning and feature engineering
-├── notebooks/
-│   ├── eda-fraud-data.ipynb     # Visible cleaning, EDA, and class analysis
-│   ├── eda-creditcard.ipynb     # Bank transaction analysis
-│   └── feature-engineering.ipynb # Modular feature creation & SMOTE
-├── src/                    # Modular Source Files (Reusable Logic)
-│   ├── data_processing.py  # Cleaning, Mapping, and Feature Engineering
-│   ├── eda_utils.py        # Reusable visualization functions
-│   └── model_utils.py      # Encoding and Imbalance handling (SMOTE)
-├── requirements.txt        # Pinned dependencies for environment stability
-├── Interim_Report_1.md     # Detailed summary of Task 1 findings
-└── README.md
+## 📂 Project Structure
+```text
+├── data/               # Raw and processed data (ignored by git)
+├── models/             # Trained model artifacts (.pkl)
+├── notebooks/          # Analysis and modeling work
+├── src/                # Modular source code
+├── tests/              # Unit tests for code reliability
+├── reports/            # Final project report and SHAP visualizations
+├── scripts/            # Deployment or processing scripts
+└── requirements.txt    # Project dependencies
 Interim 2: Modeling and Evaluation (Completed Dec 28, 2025)
 1. Data Preparation & Handling Imbalance
 Stratified Splitting: All data was split into training (80%) and testing (20%) sets using stratification to ensure the minority "Fraud" class was represented equally in both sets.
@@ -40,3 +36,20 @@ We implemented two distinct models for both the E-commerce and Credit Card datas
 Baseline: Logistic Regression (highly interpretable).
 Ensemble: XGBoost (captures complex, non-linear patterns).
 Tuning: Used RandomizedSearchCV to optimize XGBoost hyperparameters (n_estimators, max_depth, learning_rate, and scale_pos_weight).
+## ⚖️ Business Trade-offs & Model Evaluation
+
+In fraud detection for **Adey Innovations**, we must balance two competing costs:
+
+*   **The Cost of False Negatives (Missed Fraud):** If a fraudulent transaction ($500+) is missed, the company loses money directly and loses trust with banking partners. We prioritize **Recall** to catch as much fraud as possible.
+*   **The Cost of False Positives (False Alarms):** If a legitimate customer's transaction is incorrectly flagged as fraud, it causes "customer friction." The user might stop using the platform. We use **Precision-Recall AUC (AUC-PR)** to ensure we aren't flagging too many innocent users.
+
+**Our Selection Logic:**
+We selected the **Tuned XGBoost** model because it achieved a Recall of **X.XX** while keeping Precision at **Y.YY**. This balance ensures we stop the majority of financial loss without significantly harming the user experience.
+## ⚖️ Business Trade-offs & Model selection
+In the Adey Innovations fraud detection system, we optimized for the following:
+
+*   **Metric Prioritization:** We used **AUC-PR** instead of Accuracy. Accuracy is misleading because a model could be 99% accurate by simply saying "no fraud," while missing all actual fraud cases.
+*   **The Cost of Errors:** 
+    *   **False Negatives (Missed Fraud):** Highest cost. Directly impacts revenue. We prioritize **Recall** to catch these.
+    *   **False Positives (False Alarms):** Leads to customer friction. We use **Precision** to ensure our model doesn't block too many legitimate users.
+*   **Final Decision:** The **Tuned XGBoost** was selected because it outperformed the baseline by 30% in AUC-PR, providing a much safer security layer for the company.
