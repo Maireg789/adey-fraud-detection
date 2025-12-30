@@ -41,21 +41,3 @@ Based on SHAP and EDA results, we recommend the following for Adey Innovations:
 Implement a "Cool-off" Period: Accounts making purchases within 10 minutes of signup should trigger a mandatory 24-hour hold or manual identity verification.
 Adaptive MFA: Transactions exceeding $200 from countries identified as "High Risk" in our SHAP analysis should require Multi-Factor Authentication (OTP).
 Velocity Thresholds: Implement automated blocks for any Device ID linked to more than 3 unique User IDs within a 24-hour window, as this pattern strongly correlates with fraudulent activity.
-🛠️ Installation & Setup
-Clone the Repo:
-code
-Bash
-git clone https://github.com/Maireg789/adey-fraud-detection.git
-Setup Environment:
-code
-Bash
-pip install -r requirements.txt
-Run Tests:
-code
-Bash
-pytest tests/test_data.py
-👨‍💻 Branching & PR Workflow
-To maintain code quality, this project followed a feature-branch workflow:
-Tasks were developed in feature/ branches.
-Simulated Pull Requests were used to merge into the main branch.
-Commit messages follow descriptive, professional standards.
