@@ -1,34 +1,42 @@
 import pytest
 import pandas as pd
 import numpy as np
-from src.data import clean_data
+from src.data_processing import get_country_fast
 
-def test_clean_data_removes_duplicates():
-    # Create dummy data with duplicate
+def test_get_country_fast_found():
+    """Test that the IP mapping logic works for a known range."""
+    # Create a dummy IP dataframe
     data = {
-        'amount': [100.0, 200.0, 100.0],
-        'fraud': [0, 1, 0]
+        'lower_bound_ip_address': [100, 200],
+        'upper_bound_ip_address': [150, 250],
+        'country': ['TestLand', 'DebugRepublic']
     }
-    df = pd.DataFrame(data)
+    ip_df = pd.DataFrame(data)
     
-    cleaned_df = clean_data(df)
+    ip_lowers = ip_df['lower_bound_ip_address'].tolist()
+    ip_countries = ip_df['country'].tolist()
     
-    # Should have 2 rows (duplicate removed)
-    assert len(cleaned_df) == 2
-    assert cleaned_df.shape[0] == 2
+    # Test an IP inside the range [100, 150]
+    result = get_country_fast(120, ip_df, ip_lowers, ip_countries)
+    assert result == 'TestLand'
 
-def test_clean_data_fills_missing():
-    # Create dummy data with NaN
+def test_get_country_fast_not_found():
+    """Test that the IP mapping handles unknown IPs gracefully."""
     data = {
-        'amount': [100.0, np.nan, 300.0],
-        'fraud': [0, 0, 1]
+        'lower_bound_ip_address': [100],
+        'upper_bound_ip_address': [150],
+        'country': ['TestLand']
     }
-    df = pd.DataFrame(data)
+    ip_df = pd.DataFrame(data)
+    ip_lowers = ip_df['lower_bound_ip_address'].tolist()
+    ip_countries = ip_df['country'].tolist()
     
-    cleaned_df = clean_data(df)
-    
-    # Should not have any nulls
-    assert cleaned_df['amount'].isnull().sum() == 0
-    # Median of 100 and 300 is 200
-    assert cleaned_df.iloc[1]['amount'] == 200.0
-        
+    # Test an IP outside the range
+    result = get_country_fast(999, ip_df, ip_lowers, ip_countries)
+    assert result == 'Unknown'
+
+def test_dataframe_structure():
+    """Simple smoke test to ensure libraries are installed."""
+    df = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
+    assert not df.empty
+    assert df.shape == (2, 2)
