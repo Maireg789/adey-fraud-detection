@@ -1,78 +1,78 @@
 import pandas as pd
 import numpy as np
-import logging
+import io
+import bisect
+from src.utils import get_logger
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = get_logger("DataProcessing")
 
-def load_data(path):
-    """Loads data with basic error handling. Satisfies feedback: 'basic error handling'."""
-    try:
-        df = pd.read_csv(path)
-        logging.info(f"Successfully loaded {path}")
-        return df
-    except Exception as e:
-        logging.error(f"Error loading {path}: {e}")
-        return None
+def load_ip_data(filepath: str) -> pd.DataFrame:
+    """Loads and prepares IP Country data."""
+    logger.info(f"Loading IP data from {filepath}...")
+    ip_df = pd.read_csv(filepath)
+    # Ensure lower and upper bounds are integers
+    ip_df['lower_bound_ip_address'] = ip_df['lower_bound_ip_address'].astype(int)
+    ip_df['upper_bound_ip_address'] = ip_df['upper_bound_ip_address'].astype(int)
+    return ip_df
 
-def clean_data(df):
-    """Handles missing values, duplicates, and dtypes. Satisfies feedback: 'actual cleaning and duplicate checks'."""
-    if df is None: return None
+def get_country_fast(ip_address: float, ip_df: pd.DataFrame, ip_lowers: list, ip_countries: list) -> str:
+    """Fast look-up of country using binary search (bisect)."""
+    # IP is float in the main dataset, convert to int
+    ip = int(ip_address)
     
-    # 1. Duplicate check
-    before_count = len(df)
-    df = df.drop_duplicates()
-    logging.info(f"Removed {before_count - len(df)} duplicate rows.")
+    # Find insertion point
+    idx = bisect.bisect_right(ip_lowers, ip) - 1
     
-    # 2. Missing values: Numeric (median), Categorical (mode)
-    for col in df.columns:
-        if df[col].dtype == 'object':
-            df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "Unknown")
-        else:
-            df[col] = df[col].fillna(df[col].median())
-            
-    # 3. Dtype fixes
-    if 'signup_time' in df.columns:
-        df['signup_time'] = pd.to_datetime(df['signup_time'])
-        df['purchase_time'] = pd.to_datetime(df['purchase_time'])
-    
-    return df
+    if idx >= 0:
+        # Check if it's within the upper bound
+        row = ip_df.iloc[idx]
+        if row['lower_bound_ip_address'] <= ip <= row['upper_bound_ip_address']:
+            return ip_countries[idx]
+    return "Unknown"
 
-def map_ip_to_country(fraud_df, ip_df):
-    """Geolocation Integration using range-based lookup."""
-    fraud_df = fraud_df.sort_values('ip_address')
-    ip_df = ip_df.sort_values('lower_bound_ip_address')
+def process_fraud_data(fraud_path: str, ip_path: str) -> pd.DataFrame:
+    """
+    Loads Fraud_Data and IP_Address_to_Country, merges them, and processes features.
+    """
+    # 1. Load Data
+    logger.info("Loading datasets...")
+    df = pd.read_csv(fraud_path)
+    ip_df = load_ip_data(ip_path)
     
-    merged = pd.merge_asof(
-        fraud_df, 
-        ip_df, 
-        left_on='ip_address', 
-        right_on='lower_bound_ip_address'
-    )
+    # 2. Map IP to Country (Optimized)
+    logger.info("Mapping IP addresses to countries (this may take a moment)...")
     
-    merged['country'] = np.where(
-        (merged['ip_address'] >= merged['lower_bound_ip_address']) & 
-        (merged['ip_address'] <= merged['upper_bound_ip_address']), 
-        merged['country'], 'Unknown'
-    )
-    return merged
-
-def engineer_features(df):
-    """Task 1: Creating time and velocity features."""
-    if 'signup_time' in df.columns:
-        # Time-based features
-        df['time_since_signup'] = (df['purchase_time'] - df['signup_time']).dt.total_seconds()
-        df['hour_of_day'] = df['purchase_time'].dt.hour
-        df['day_of_week'] = df['purchase_time'].dt.dayofweek
+    # Pre-compute lists for binary search
+    ip_lowers = ip_df['lower_bound_ip_address'].tolist()
+    ip_countries = ip_df['country'].tolist()
     
-    # Velocity features: how many times is this device used?
-    if 'device_id' in df.columns:
-        df['device_usage_count'] = df.groupby('device_id')['device_id'].transform('count')
-        
-    return df
-
-def scale_features(df, columns):
-    """Standardizes numeric features (crucial for Credit Card data)."""
-    from sklearn.preprocessing import StandardScaler
-    scaler = StandardScaler()
-    df[columns] = scaler.fit_transform(df[columns])
+    # Apply the mapping (Use a subset for testing if too slow, e.g., df.head(10000))
+    # For full run:
+    df['country'] = df['ip_address'].apply(lambda x: get_country_fast(x, ip_df, ip_lowers, ip_countries))
+    
+    # 3. Time Features
+    logger.info("Engineering time features...")
+    df['signup_time'] = pd.to_datetime(df['signup_time'])
+    df['purchase_time'] = pd.to_datetime(df['purchase_time'])
+    
+    # Velocity: Seconds between signup and purchase
+    df['time_diff'] = (df['purchase_time'] - df['signup_time']).dt.total_seconds()
+    df['hour_of_day'] = df['purchase_time'].dt.hour
+    df['day_of_week'] = df['purchase_time'].dt.dayofweek
+    
+    # 4. Cleanup
+    cols_to_drop = ['user_id', 'device_id', 'signup_time', 'purchase_time', 'ip_address']
+    df = df.drop(columns=cols_to_drop)
+    
+    # 5. One-Hot Encoding (Country, Source, Browser, Sex)
+    logger.info("Encoding categorical variables...")
+    
+    # Limit countries to Top 10 to prevent 200+ columns (Engineering Decision)
+    top_countries = df['country'].value_counts().nlargest(10).index
+    df['country'] = df['country'].apply(lambda x: x if x in top_countries else 'Other')
+    
+    categorical_cols = ['source', 'browser', 'sex', 'country']
+    df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+    
+    logger.info(f"Processing complete. Shape: {df.shape}")
     return df
