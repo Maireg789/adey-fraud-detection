@@ -29,16 +29,16 @@ A production-grade fraud detection pipeline designed for the finance sector. It 
 ## 💻 Quick Start
 1. Clone the repo:
 code
-Bash
+- Bash
 git clone https://github.com/Maireg789/adey-fraud-detection.git
 cd adey-fraud-detection
 2. Install dependencies:
 code
-Bash
+- Bash
 pip install -r requirements.txt
 3. Run the Dashboard:
 code
-Bash
+- Bash
 streamlit run app.py
 ## 📊 Results
 1. Model: XGBoost Classifier
