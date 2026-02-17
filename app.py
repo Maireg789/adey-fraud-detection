@@ -11,58 +11,76 @@ def load_assets():
     try:
         model = joblib.load("models/xgb_model.pkl")
         features = joblib.load("models/features.pkl")
-        # Load the REAL sample data we saved during training
-        sample_data = pd.read_csv("models/sample_data.csv")
-        return model, features, sample_data
+        # Load the FULL dataset
+        data = pd.read_csv("models/all_processed_data.csv")
+        return model, features, data
     except FileNotFoundError:
         return None, None, None
 
-model, features, sample_data = load_assets()
+model, features, data = load_assets()
 
 if model is None:
-    st.error("🚨 Models not found. Please run 'python train_pipeline.py' first!")
+    st.error("🚨 Data not found. Run 'python train_pipeline.py' first!")
 else:
     st.title("🛡️ Adey Fraud Detection System")
-    st.markdown("### Real-Time Transaction Analysis")
+    st.markdown(f"### Analyzing {len(data):,} Real Transactions")
 
-    # Sidebar
+    # --- Sidebar: Select ANY Transaction ---
     st.sidebar.header("Select Transaction")
     
-    # Allow user to pick a row from the real data
-    # We use the index as a proxy for Transaction ID
-    txn_id = st.sidebar.selectbox("Choose a Transaction ID (Sample)", sample_data.index)
+    # Input box for ID (0 to 150,000)
+    max_id = len(data) - 1
+    txn_id = st.sidebar.number_input(f"Enter Transaction ID (0 - {max_id})", min_value=0, max_value=max_id, value=123, step=1)
     
-    # Get the row data
-    row_data = sample_data.loc[[txn_id]]
+    # Extract the row
+    row_data = data.iloc[[txn_id]].copy()
     
-    st.write("#### 1. Transaction Features (Processed)")
-    st.dataframe(row_data)
+    # Separate Features (X) and Target (y) if 'class' exists
+    if 'class' in row_data.columns:
+        actual_class = row_data['class'].values[0]
+        # Drop class so we can feed it to the model
+        row_features = row_data.drop(columns=['class'])
+    else:
+        actual_class = None
+        row_features = row_data
+
+    # --- Display Data ---
+    st.write("#### 1. Transaction Features")
+    st.dataframe(row_features)
+    
+    if actual_class is not None:
+        status = "FRAUD" if actual_class == 1 else "LEGIT"
+        color = "red" if actual_class == 1 else "green"
+        st.caption(f"Actual Historical Status: :{color}[{status}]")
 
     if st.button("Analyze Risk"):
         # Predict
-        prob = model.predict_proba(row_data)[0][1]
-        prediction = int(prob > 0.5)
+        prob = model.predict_proba(row_features)[0][1]
         
-        # Display
+        # Display Metrics
         col1, col2, col3 = st.columns(3)
         col1.metric("Fraud Probability", f"{prob:.2%}")
-        col2.metric("Risk Status", "HIGH RISK" if prob > 0.5 else "Safe", 
-                    delta="-Block" if prob > 0.5 else "+Approve")
         
-        # Explainability
+        risk_label = "HIGH RISK" if prob > 0.5 else "Low Risk"
+        col2.metric("Model Prediction", risk_label, delta="-Block" if prob > 0.5 else "+Approve")
+        
+        if actual_class is not None:
+            match = (int(prob > 0.5) == actual_class)
+            col3.metric("Prediction vs Actual", "Correct" if match else "Incorrect", delta_color="normal")
+        
+        # --- FIXED SHAP PLOT ---
         st.write("#### 2. Why this prediction?")
-        with st.spinner("Calculating SHAP values..."):
+        with st.spinner("Calculating SHAP Waterfall..."):
             explainer = shap.TreeExplainer(model)
-            shap_values = explainer(row_data)
+            shap_values = explainer(row_features)
             
-            fig, ax = plt.subplots(figsize=(10, 3))
-            shap.plots.force(
-                shap_values[0].base_values, 
-                shap_values[0].values, 
-                row_data.iloc[0], 
-                matplotlib=True,
-                show=False
-            )
-            st.pyplot(fig)
+            # Create a Matplotlib Figure explicitly
+            fig = plt.figure(figsize=(10, 5))
             
-            st.info("Red bars push risk HIGHER. Blue bars push risk LOWER.")
+            # Draw the Waterfall plot
+            shap.plots.waterfall(shap_values[0], max_display=10, show=False)
+            
+            # Display in Streamlit
+            st.pyplot(fig, clear_figure=True)
+            
+            st.info("Red bars push the risk score UP. Blue bars push it DOWN.")
