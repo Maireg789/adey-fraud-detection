@@ -41,6 +41,6 @@ code
 Bash
 streamlit run app.py
 ## 📊 Results
-Model: XGBoost Classifier
-Metric: AUC-PR: 0.89
-Key Insight: "Time between signup and purchase" is the #1 predictor of fraud.
+1. Model: XGBoost Classifier
+2. Metric: AUC-PR: 0.89
+3. Key Insight: "Time between signup and purchase" is the #1 predictor of fraud.
